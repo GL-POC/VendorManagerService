@@ -6,7 +6,7 @@ import com.gl.vendor.management.services.VendorService
 
 import scala.concurrent.ExecutionContext
 
-trait RestInterface extends Resources {
+trait VMSRestInterface extends Resources {
 
   implicit def executionContext: ExecutionContext
 
