@@ -30,7 +30,10 @@ libraryDependencies ++= {
     "com.typesafe.slick" %% "slick-hikaricp" % slickV,
     "org.slf4j" % "slf4j-nop" % "1.6.4",
     "mysql" % "mysql-connector-java" % "5.1.40",
-    "org.flywaydb" % "flyway-core" % "3.2.1"
+    "org.flywaydb" % "flyway-core" % "3.2.1",
+    "org.json4s"        %% "json4s-native"   % Json4sVersion,
+    "org.json4s"        %% "json4s-ext"      % Json4sVersion,
+    "de.heikoseeberger" %% "akka-http-json4s" % "1.16.0"
   )
 }
 
