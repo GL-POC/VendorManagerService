@@ -12,9 +12,15 @@ Run the service:
 ```
 > sbt run
 ```
-The service runs on port 5000 by default.
-
 ## Usage
+### Start up an instance of Mysql db:
+install mysql
+net start mysql
+mysql -u root
+
+CREATE USER 'myuser'@'LOCALHOST' IDENTIFIED BY 'mypass';
+CREATE DATABASE vmsdb;
+GRANT ALL ON vmsdb.* TO 'myuser'@'localhost';
 
 Vendor entity:
 ```
@@ -24,14 +30,13 @@ case class Vendor(vendor_id: String, vendor_name: String)
 Request:
 ```
 	POST http://localhost:5000/vendors
-	'{"vendor_id": "100", "vendor_name": "ABC"}'
+	'{"vendor_name": "ABC"}'
 ```
 ### Get a Vendor
 Request:
 ```
      GET http://localhost:5000/vendors/100
-     http://localhost:5000/vendors/all
-     http://localhost:5000/vendors/ABC
+     http://localhost:5000/vendors
 ```
 
 ### Update a Vendor

@@ -1,67 +1,31 @@
 package com.gl.vendor.management.services
 
-import com.gl.vendor.management.entities.{Vendor, VendorUpdate}
+import com.gl.vendor.management.entities.Vendor
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
 
-class VendorService(implicit val executionContext: ExecutionContext) {
+class VendorService(val databaseService: DatabaseService)(implicit executionContext: ExecutionContext) {
+  import databaseService._
+  import databaseService.driver.api._
 
-  var vendors = Vector.empty[Vendor]
+  val vendors = TableQuery[daoType.Vendors]
 
-  def createVendor(vendor: Vendor): Future[Option[String]] = Future {
-    vendors.find(_.vendor_id == vendor.vendor_id) match {
-      case Some(q) => None
-      case None =>
-        vendors = vendors :+ vendor
-        Some(vendor.vendor_id)
+  def getVendors(): Future[Seq[Vendor]] = db.run(vendors.result)
+
+  def getVendor(id: Long): Future[Option[Vendor]] = db.run(vendors.filter(_.id === id).result.headOption)
+
+  def getVendorsByName(name: String): Future[Seq[Vendor]] = db.run(vendors.filter(_.name === name).result)
+
+
+  def createVendor(vendor: Vendor): Future[Vendor] = db.run(vendors returning vendors.map(_.id) into ((vendor, id) => vendor.copy(vendor_id=Some(id))) += vendor)
+
+  def update(id: Long, toUpdate: Vendor): Future[Option[Vendor]] = getVendor(id).flatMap {
+    case Some(vendor) => {
+      val updatedVendor = Vendor(vendor.vendor_id, toUpdate.vendor_name)
+      db.run(vendors.filter(_.id === id).update(updatedVendor)).map(_ => Some(updatedVendor))
     }
+    case None => Future.successful(None)
   }
 
-  def getVendorList(id: String): Future[Vector[Vendor]] = Future {
-    id match {
-      case "all" => vendors
-      case s: String if !s.isInt => vendors.find(_.vendor_name == id) match {
-        case Some(b) => Vector(b)
-        case None => Vector.empty[Vendor]
-      }
-
-      case _ => vendors.find(_.vendor_id == id) match {
-        case Some(a) => Vector(a)
-        case None => Vector.empty[Vendor]
-      }
-    }
-  }
-
-  def getVendor(id: String): Future[Option[Vendor]] = Future {
-    vendors.find(_.vendor_id == id)
-  }
-
-  def updateVendor(vendor_id: String, update: VendorUpdate): Future[Option[Vendor]] = {
-
-    def updateEntity(vendor: Vendor): Vendor = {
-      val name = update.vendor_name.getOrElse(vendor.vendor_name)
-      Vendor(vendor_id, name)
-    }
-
-    getVendor(vendor_id).flatMap { maybeVendor =>
-      maybeVendor match {
-        case None => Future { None }
-        case Some(vendor) =>
-          val updatedVendor = updateEntity(vendor)
-          deleteVendor(vendor_id).flatMap { _ =>
-            createVendor(updatedVendor).map(_ => Some(updatedVendor))
-          }
-      }
-    }
-  }
-
-  def deleteVendor(id: String): Future[Unit] = Future {
-    vendors = vendors.filterNot(_.vendor_id == id)
-  }
-
-  implicit class IsInt(i: String){
-    def isInt: Boolean = Try(i.toInt).isSuccess
-  }
+  def deleteVendor(id: Long):Future[Int] = db.run(vendors.filter(_.id === id).delete)
 }
-

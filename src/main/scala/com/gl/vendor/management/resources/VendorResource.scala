@@ -1,39 +1,54 @@
-package com.gl.vendor.management.resources
+package http
 
-import akka.http.scaladsl.server.Route
-
-import com.gl.vendor.management.entities.{Vendor, VendorUpdate}
-import com.gl.vendor.management.routing.ResourceRouting
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.StatusCodes._
+import com.gl.vendor.management.entities.Vendor
 import com.gl.vendor.management.services.VendorService
+import spray.json.DefaultJsonProtocol
 
-trait VendorResource extends ResourceRouting {
-
-  val vendorService: VendorService
-
-  def vendorRoutes: Route = pathPrefix("vendors") {
-    pathEnd {
-      post {
-        entity(as[Vendor]) { vendor =>
-          completeWithLocationHeader(
-            resourceId = vendorService.createVendor(vendor),
-            ifDefinedStatus = 201, ifEmptyStatus = 409)
-          }
-        }
-    } ~
-    path(Segment) { id =>
-      get {
-        complete(vendorService.getVendorList(id))
-      } ~
-      put {
-        entity(as[VendorUpdate]) { update =>
-          complete(vendorService.updateVendor(id, update))
-        }
-      } ~
-      delete {
-        complete(vendorService.deleteVendor(id))
-      }
-    }
-
-  }
+trait Protocols extends SprayJsonSupport with DefaultJsonProtocol {
+  implicit val vendorFormat = jsonFormat2(Vendor)
 }
 
+class VendorResource(val vendorService: VendorService) extends Protocols {
+
+  val route = logRequestResult("VendorResource") {
+    pathPrefix("vendors") {
+      pathEndOrSingleSlash {
+        get {
+          complete {
+            vendorService.getVendors()
+          }
+        } ~
+          post {
+            entity(as[Vendor]) { vendorForCreate =>
+              complete {
+                vendorService.createVendor(vendorForCreate)
+              }
+            }
+          }
+      } ~
+        pathPrefix(LongNumber) { id =>
+          get {
+            complete {
+              vendorService.getVendor(id)
+            }
+          } ~
+            put {
+              entity(as[Vendor]) { vendorForUpdate =>
+                complete {
+                  vendorService.update(id, vendorForUpdate)
+                }
+              }
+            } ~
+            delete {
+              onSuccess(vendorService.deleteVendor(id)) { _ =>
+                complete(NoContent)
+              }
+            }
+        }
+    }
+  }
+
+}
